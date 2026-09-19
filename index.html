@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evaluasi SAMR</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body { background:#495057; min-height:100vh; font-family:Segoe UI,Arial,sans-serif; padding:18px 0; }
+    #app { max-width:520px; margin:auto; background:#f8f9fa; border:8px solid #212529; border-radius:24px; overflow:hidden; box-shadow:0 0 30px #0008; display:flex; flex-direction:column; }
+    .app-header { background:linear-gradient(135deg,#4b00ff,#2700d9); color:#fff; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; flex:0 0 auto; }
+    .app-header h4 { font-weight:700; }
+    .info-button { border:0; background:transparent; color:#fff; font-size:24px; line-height:1; cursor:pointer; padding:0 2px; }
+    .content { overflow:visible; flex:none; }
+    .info-modal { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; padding:20px; background:#0008; }
+    .info-modal.show { display:flex; }
+    .info-box { width:min(420px,100%); background:#fff; border-radius:18px; padding:22px; box-shadow:0 8px 30px #0005; white-space:pre-line; color:#334155; line-height:1.55; }
+    .info-box h5 { color:#1e293b; font-weight:700; }
+    .content { padding:20px; }
+    .page { display:none; } .page.active { display:block; }
+    .check { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:13px 14px; margin:10px 0; display:flex; gap:11px; align-items:flex-start; box-shadow:0 1px 2px #00000008; cursor:pointer; }
+    .check.checked { background:#faf8ff; border-color:#d9ccff; }
+    .check input { width:24px; height:24px; flex:0 0 auto; margin-top:1px; accent-color:#5200ff; }
+    .check-content { min-width:0; flex:1; }
+    .check-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .check-title { color:#17202a; font-weight:700; font-size:1rem; }
+    .level-badge { color:#fff; border-radius:999px; padding:3px 9px; font-size:.72rem; font-weight:600; white-space:nowrap; }
+    .check-line { color:#6c757d; font-size:.82rem; line-height:1.35; margin-top:4px; }
+    .check-line strong { color:#58616b; }
+    .check-line .gear { color:#8b949e; } .check-line .bulb { color:#ffb900; }
+    .info-banner { background:#c8f4ff; border-radius:16px; padding:14px; color:#145267; font-size:.88rem; margin-bottom:15px; }
+    .result-head { text-align:center; padding:8px 0 18px; }
+    .result-icon { width:58px; height:58px; line-height:58px; margin:-28px auto 10px; border-radius:50%; background:#08a66a; color:#fff; font-size:32px; }
+    .result-title { font-weight:700; font-size:1.1rem; margin-bottom:4px; }
+    .result-badge { display:inline-block; background:#212529; color:#ffe600; border-radius:999px; padding:7px 14px; font-weight:700; font-size:.8rem; box-shadow:0 2px 5px #0003; }
+    .result-card { background:#fff; border-left:4px solid; border-radius:12px; padding:12px; margin:10px 0; box-shadow:0 2px 6px #00000012; }
+    .result-card small { color:#65717d; text-transform:uppercase; letter-spacing:.04em; }
+    .result-track { height:8px; background:#e9ecef; border-radius:10px; overflow:hidden; margin:8px 0 5px; }
+    .result-fill { height:100%; border-radius:10px; }
+    .result-meta { text-align:right; color:#65717d; font-size:.76rem; }
+    .level { color:#fff; border-radius:10px; padding:10px 12px; margin-top:20px; font-weight:700; }
+    .level-group.is-hidden { display:none; }
+    .card { border:0; border-radius:14px; box-shadow:0 2px 8px #0001; }
+    .muted { color:#6c757d; font-size:.9rem; }
+  </style>
+</head>
+<body>
+<main id="app">
+  <header class="app-header"><h4 class="mb-0">SAMR App</h4><button class="info-button" aria-label="Info aplikasi" onclick="bukaInfo()">ⓘ</button></header>
+  <section class="content">
+    <div id="loading" class="text-center py-5">Memuat aplikasi...</div>
+    <div id="page-identitas" class="page">
+      <div class="card p-3"><h5>Identitas Pengguna</h5><p class="muted">Pilih nama yang terdaftar.</p>
+        <select id="nama" class="form-select mb-3"><option value="">Pilih nama</option></select>
+        <input id="identitas" class="form-control mb-3" placeholder="Identitas/Kelas" readonly>
+        <button class="btn btn-primary w-100" onclick="mulai()">Mulai Evaluasi</button>
+      </div>
+    </div>
+    <div id="page-evaluasi" class="page"><div class="info-banner">ⓘ &nbsp;Centang indikator yang telah terpenuhi.</div><div id="checklist"></div>
+      <button id="kirim" class="btn btn-success w-100 mt-3" onclick="simpan()">Simpan Evaluasi</button>
+      <div id="pesan" class="mt-3"></div>
+    </div>
+    <div id="page-hasil" class="page"><div class="result-head"><div class="result-icon">✓</div><div class="result-title">Hasil Analisa</div><div class="muted" id="hasil-nama"></div><div class="mt-3"><span class="result-badge" id="hasil-level"></span></div></div><div id="hasil-levels"></div><button class="btn btn-primary w-100 mt-3" onclick="tampil('page-identitas')">Kembali ke Awal</button></div>
+  </section>
+</main>
+<div id="info-modal" class="info-modal" onclick="tutupInfo(event)"><div class="info-box"><h5>Info Aplikasi</h5><div>SAMR App dirancang sebagai Web App untuk kebutuhan administrasi digital.
+
+<b>Logika Perhitungan Level Akhir:</b>
+
+Belum tuntas L1 (1-6) → Level 1
+Tuntas L1, belum L2 (7-13) → Level 2
+Tuntas L1+L2, belum L3 (14-18) → Level 3
+Tuntas L1+L2+L3 → Level 4</div><button class="btn btn-primary w-100 mt-3" onclick="tutupInfo()">Tutup</button></div></div>
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwubTEl_ARlSnOllw_FT8K-vBeT7Pv4T5f1kFD0cXXt-1EOeSXkEmDN7925gmLhaHVN/exec';
+  let data = { levels:[], items:[], identities:[] }, answers = {}, user = {};
+  function tampil(id) { document.querySelectorAll('.page').forEach(e => e.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
+  function bukaInfo() { document.getElementById('info-modal').classList.add('show'); }
+  function tutupInfo(event) { if (!event || event.target.id === 'info-modal' || event.target.tagName === 'BUTTON') document.getElementById('info-modal').classList.remove('show'); }
+  async function api(action, body) {
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      const name = action === 'data' ? 'getAppData' : 'saveResponse';
+      const args = action === 'save' ? [body.data] : [];
+      return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[name](...args));
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(function () { controller.abort(); }, 20000);
+    let res;
+    try {
+      res = await fetch(API_URL + (body ? '' : '?action=' + action), body ? { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({action:action}, body)), signal:controller.signal } : { signal:controller.signal });
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('Server tidak merespons dalam 20 detik. Periksa deployment Web App.');
+      throw new Error('Koneksi ke Web App gagal. Pastikan akses deployment disetel Anyone.');
+    } finally { clearTimeout(timeout); }
+    const json = await res.json();
+    if (json && json.success === false) throw new Error(json.error || 'Permintaan gagal.');
+    return json;
+  }
+  async function init() { try { data = await api('data'); const sel=document.getElementById('nama'); data.identities.forEach((x,i)=>{const o=document.createElement('option');o.value=i;o.textContent=x.nama;sel.appendChild(o);}); sel.onchange=()=>document.getElementById('identitas').value=sel.value===''?'':data.identities[sel.value].identitas; document.getElementById('loading').remove(); tampil('page-identitas'); } catch(e) { document.getElementById('loading').textContent=e.message; } }
+  function mulai() {
+    const i = document.getElementById('nama').value;
+    if (i === '') return alert('Pilih nama terlebih dahulu.');
+    user = data.identities[i]; answers = {};
+    const box = document.getElementById('checklist'); box.innerHTML = '';
+    data.levels.forEach(function (level) {
+      const group = document.createElement('div');
+      group.className = 'level-group' + (level.id > 1 ? ' is-hidden' : '');
+      group.dataset.level = level.id;
+      data.items.filter(function (item) { return item.level === level.id; }).forEach(function (item) {
+        const label = document.createElement('label'); label.className = 'check';
+        const cb = document.createElement('input'); cb.type = 'checkbox';
+        const content = document.createElement('div'); content.className = 'check-content';
+        const top = document.createElement('div'); top.className = 'check-top';
+        const title = document.createElement('span'); title.className = 'check-title';
+        title.textContent = item.id + '. ' + item.title;
+        const badge = document.createElement('span'); badge.className = 'level-badge';
+        badge.style.background = level.color; badge.textContent = 'Level ' + item.level;
+        top.append(title, badge);
+        const practice = document.createElement('div'); practice.className = 'check-line';
+        practice.innerHTML = '<span class="gear">⚙</span> <strong>Praktik:</strong> ';
+        practice.appendChild(document.createTextNode(item.practice));
+        const example = document.createElement('div'); example.className = 'check-line';
+        example.innerHTML = '<span class="bulb">💡</span> <strong>Contoh:</strong> ';
+        example.appendChild(document.createTextNode(item.example));
+        content.append(top, practice, example); label.append(cb, content);
+        cb.onchange = function () { answers[item.id] = cb.checked; label.classList.toggle('checked', cb.checked); updateLevelVisibility(); };
+        group.appendChild(label);
+      });
+      box.appendChild(group);
+    });
+    tampil('page-evaluasi');
+  }
+  function updateLevelVisibility() {
+    let unlocked = true;
+    data.levels.forEach(function (level) {
+      const group = document.querySelector('.level-group[data-level="' + level.id + '"]');
+      if (!group) return;
+      group.classList.toggle('is-hidden', !unlocked);
+      const complete = data.items.filter(function (item) { return item.level === level.id; }).every(function (item) { return answers[item.id] === true; });
+      unlocked = unlocked && complete;
+    });
+  }
+  async function simpan() { const btn=document.getElementById('kirim');btn.disabled=true;document.getElementById('pesan').className='alert alert-warning';document.getElementById('pesan').textContent='Menyimpan...';try{const response=await api('save',{data:{nama:user.nama,identitas:user.identitas,answers:answers}});document.getElementById('pesan').textContent='';renderHasil(response.result);tampil('page-hasil');}catch(e){document.getElementById('pesan').className='alert alert-danger';document.getElementById('pesan').textContent=e.message;}finally{btn.disabled=false;} }
+  function renderHasil(result) { document.getElementById('hasil-nama').textContent = user.nama; document.getElementById('hasil-level').textContent = '🏆 Capaian: LEVEL ' + result.level; const box=document.getElementById('hasil-levels'); box.innerHTML=''; result.stats.forEach(function(stat){const level=data.levels.find(function(x){return x.id===stat.id;});const items=data.items.filter(function(x){return x.level===stat.id;});const card=document.createElement('div');card.className='result-card';card.style.borderLeftColor=level.color;const label=document.createElement('small');label.textContent='Level '+stat.id+' (item '+items[0].id+'-'+items[items.length-1].id+') — '+stat.percent+'%';const track=document.createElement('div');track.className='result-track';const fill=document.createElement('div');fill.className='result-fill';fill.style.width=stat.percent+'%';fill.style.background=level.color;track.appendChild(fill);const meta=document.createElement('div');meta.className='result-meta';meta.textContent=stat.checked+' dari '+stat.total+' terpenuhi';card.append(label,track,meta);box.appendChild(card);}); }
+  init();
+</script>
+</body></html>
